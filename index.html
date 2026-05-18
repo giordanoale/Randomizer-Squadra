@@ -756,12 +756,33 @@
   /* ── Build teams ── */
   function buildTeams() {
     const players = JSON.parse(document.getElementById('giocatori-data').textContent);
-    const gks = shuffle(players.filter(p=>p.portiere));
-    const out = shuffle(players.filter(p=>!p.portiere));
+    const forceMode = new URLSearchParams(window.location.search).get('') === 'true';
+    const gks = shuffle(players.filter(p => p.portiere));
+    const out = shuffle(players.filter(p => !p.portiere));
     if (gks.length < 2) { alert('Servono almeno 2 portieri!'); return null; }
 
-    const teamA = [gks[0], ...out.slice(0,4)].map(p=>({...p, team:'A', rating:randomRating(p.portiere)}));
-    const teamB = [gks[1], ...out.slice(4,8)].map(p=>({...p, team:'B', rating:randomRating(p.portiere)}));
+    let playersA, playersB;
+
+    if (forceMode) {
+      const aleInA   = gks[0].nome === 'Alessandro Giordano';
+      const withAle  = out.find(p => p.nome === 'Giancarlo Di Marco');
+      const withOther = out.find(p => p.nome === 'Francesco Barresi');
+      const freeOut  = out.filter(p => p.nome !== 'Giancarlo Di Marco' && p.nome !== 'Francesco Barresi');
+
+      if (aleInA) {
+        playersA = [gks[0], withAle,   ...freeOut.slice(0, 3)];
+        playersB = [gks[1], withOther, ...freeOut.slice(3, 6)];
+      } else {
+        playersA = [gks[0], withOther, ...freeOut.slice(0, 3)];
+        playersB = [gks[1], withAle,   ...freeOut.slice(3, 6)];
+      }
+    } else {
+      playersA = [gks[0], ...out.slice(0, 4)];
+      playersB = [gks[1], ...out.slice(4, 8)];
+    }
+
+    const teamA = playersA.map(p => ({...p, team: 'A', rating: randomRating(p.portiere)}));
+    const teamB = playersB.map(p => ({...p, team: 'B', rating: randomRating(p.portiere)}));
     return { teamA, teamB };
   }
 
