@@ -1,0 +1,42 @@
+[
+  {
+    "nome": "Michele Fiore",
+    "portiere": false
+  },
+  {
+    "nome": "Alessandro Giordano",
+    "portiere": true
+  },
+   {
+    "nome": "Andrea Muggiano",
+    "portiere": false
+  },
+   {
+    "nome": "Giancarlo Di Marco",
+    "portiere": false
+  },
+   {
+    "nome": "Alessio Romagnoli",
+    "portiere": false
+  },
+   {
+    "nome": "Francesco Barresi",
+    "portiere": false
+  },
+   {
+    "nome": "Matteo Pane",
+    "portiere": false
+  },
+   {
+    "nome": "Stefano Viola",
+    "portiere": false
+  },
+   {
+    "nome": "Federico Montebianco",
+    "portiere": true
+  },
+   {
+    "nome": "Luca Campegiani",
+    "portiere": false
+  }
+]

@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Randomizer Squadra</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Rajdhani:wght@500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0f;
+      min-height: 100vh;
+      font-family: 'Oswald', sans-serif;
+      overflow-x: hidden;
+    }
+
+    #bg-canvas {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    }
+
+    /* ══ HERO ══ */
+    .page {
+      position: relative; z-index: 1; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .hero {
+      width: 100%; text-align: center; padding: 48px 16px 32px;
+      position: relative; isolation: isolate;
+    }
+    .hero-title-wrap {
+      position: relative; display: block;
+    }
+    .hero-crossbones {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(480px, 85vw); aspect-ratio: 1;
+      pointer-events: none; z-index: 0; opacity: .55;
+    }
+    .hero-logo, .hero-title, .hero-subtitle, .btn-wrap {
+      position: relative; z-index: 1;
+    }
+    .hero-logo {
+      font-size: clamp(1.1rem,3vw,1.7rem); letter-spacing: .3em;
+      color: #c8a84b; text-transform: uppercase; opacity: .8;
+      margin-bottom: 55px;
+    }
+    .hero-title {
+      font-size: clamp(3.2rem,10vw,7.5rem); font-weight: 700;
+      letter-spacing: .05em; text-transform: uppercase; line-height: 1.05;
+      background: linear-gradient(135deg,#f5d97a 0%,#c8a84b 40%,#f5d97a 70%,#a07830 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-subtitle {
+      margin-top: 61px; font-family: 'Rajdhani',sans-serif;
+      font-size: clamp(1rem,2.5vw,1.4rem); color: #c8a84b;
+      letter-spacing: .25em; text-transform: uppercase; opacity: .85;
+    }
+    .btn-wrap { margin-top: 52px; }
+
+    /* ══ GOLD BUTTON ══ */
+    .gold-btn {
+      position: relative; padding: 22px 80px;
+      font-family: 'Oswald',sans-serif; font-size: 1.5rem; font-weight: 700;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: #0a0a0f; background: linear-gradient(135deg,#f5d97a,#c8a84b,#f5d97a);
+      border: none; cursor: pointer;
+      clip-path: polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
+      transition: filter .2s, transform .15s; outline: none;
+    }
+    .gold-btn:hover { filter: brightness(1.15); transform: translateY(-2px); }
+    .gold-btn:active { transform: translateY(0); filter: brightness(.95); }
+    .gold-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ══ OVERLAY (pack + reveal) ══ */
+    #pack-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: #000; align-items: center; justify-content: center; flex-direction: column;
+    }
+    #pack-overlay.active { display: flex; }
+
+    /* ── Pack screen ── */
+    #pack-screen { display: flex; flex-direction: column; align-items: center; }
+    .pack-glow {
+      position: absolute; width: 500px; height: 500px; border-radius: 50%;
+      background: radial-gradient(circle,rgba(200,168,75,.35) 0%,transparent 70%);
+      animation: pulseGlow 1.8s ease-in-out infinite; pointer-events: none;
+    }
+    @keyframes pulseGlow {
+      0%,100% { transform: scale(1); opacity: .7; }
+      50%      { transform: scale(1.25); opacity: 1; }
+    }
+    .pack-box {
+      position: relative; width: 220px; height: 300px;
+      cursor: pointer; perspective: 800px; z-index: 1;
+    }
+    .pack-inner {
+      width: 100%; height: 100%; position: relative;
+      transform-style: preserve-3d;
+      animation: packFloat 2s ease-in-out infinite;
+    }
+    @keyframes packFloat {
+      0%,100% { transform: translateY(0) rotateY(0deg); }
+      50%      { transform: translateY(-12px) rotateY(6deg); }
+    }
+    .pack-front {
+      position: absolute; inset: 0;
+      background: linear-gradient(145deg,#1a2540 0%,#0d1525 50%,#1e3060 100%);
+      border: 2px solid #c8a84b; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 0 40px rgba(200,168,75,.5),inset 0 0 30px rgba(200,168,75,.1);
+      overflow: hidden;
+    }
+    .pack-front::before {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: conic-gradient(transparent 0deg,rgba(200,168,75,.15) 60deg,transparent 120deg);
+      animation: packSpin 3s linear infinite;
+    }
+    @keyframes packSpin { to { transform: rotate(360deg); } }
+    .pack-icon { font-size: 4rem; z-index: 1; }
+    .pack-label-big { z-index:1; font-size:1.4rem; font-weight:700; color:#fff; letter-spacing:.1em; text-transform:uppercase; }
+    .pack-label     { z-index:1; font-size:.75rem; letter-spacing:.3em; color:#c8a84b; text-transform:uppercase; margin-top:8px; }
+    .pack-tap-hint {
+      margin-top: 28px; z-index: 1;
+      font-family: 'Rajdhani',sans-serif; font-size: 1rem;
+      letter-spacing: .25em; color: #c8a84b; text-transform: uppercase;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ══ REVEAL SCREEN ══ */
+    #reveal-screen {
+      display: none; width: 100%; height: 100%;
+      position: absolute; inset: 0;
+    }
+    #reveal-screen.active { display: grid; }
+
+    /* ── Background name ── */
+    #reveal-bg-name {
+      position: absolute; inset: 0; z-index: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      pointer-events: none; overflow: hidden; gap: 0;
+    }
+    .reveal-bg-line {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(6rem, 20vw, 17rem);
+      font-weight: 700; text-transform: uppercase;
+      letter-spacing: -.01em; line-height: .9;
+      text-align: center; white-space: nowrap;
+    }
+    .reveal-bg-firstname { animation: bgFirstIn .5s ease-out forwards; }
+    .reveal-bg-lastname  { animation: bgLastIn  .5s .07s ease-out both; }
+    @keyframes bgFirstIn {
+      from { transform: translateX(140px); opacity: 0; }
+      to   { transform: translateX(0);     opacity: 1; }
+    }
+    @keyframes bgLastIn {
+      from { transform: translateX(-140px); opacity: 0; }
+      to   { transform: translateX(0);      opacity: 1; }
+    }
+
+    .reveal-layout {
+      position: relative; z-index: 1;
+      width: 100%; height: 100%;
+      display: grid;
+      grid-template-columns: 200px 1fr 200px;
+      grid-template-rows: 1fr;
+      align-items: start;
+      padding: 24px 16px;
+      gap: 12px;
+    }
+
+    @media (max-width: 640px) {
+      .reveal-layout {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        padding: 12px;
+      }
+      .reveal-center-col {
+        grid-column: 1 / -1;
+        grid-row: 1;
+      }
+      .reveal-side-a { grid-column: 1; grid-row: 2; }
+      .reveal-side-b { grid-column: 2; grid-row: 2; }
+    }
+
+    /* ── Side panels ── */
+    .reveal-side {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding-top: 8px;
+    }
+    .side-label {
+      font-size: .75rem; letter-spacing: .25em; text-transform: uppercase;
+      font-family: 'Rajdhani',sans-serif; font-weight: 700; margin-bottom: 4px;
+    }
+    .reveal-side-a .side-label { color: #7ab8f5; }
+    .reveal-side-b .side-label { color: #f57a7a; }
+
+    /* Mini card in side panel */
+    .mini-card {
+      width: 100%; max-width: 180px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0;
+    }
+    .mini-card.show-a {
+      animation: miniInLeft .35s ease-out forwards;
+    }
+    .mini-card.show-b {
+      animation: miniInRight .35s ease-out forwards;
+    }
+    @keyframes miniInLeft  { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes miniInRight { from{transform:translateX(20px);opacity:0}  to{transform:translateX(0);opacity:1} }
+
+    .mini-pos {
+      width: 28px; height: 28px; border-radius: 5px; font-size: .55rem;
+      font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mini-pos.gk  { background: linear-gradient(135deg,#c8a84b,#8a6a20); color:#000; }
+    .mini-pos.out { background: linear-gradient(135deg,#2a4a7a,#1a2a4a); color:#7ab8f5; border:1px solid rgba(122,184,245,.3); }
+    .mini-name {
+      font-size: .7rem; font-weight: 600; color: #ccc; text-transform: uppercase;
+      letter-spacing: .04em; line-height: 1.2; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
+    }
+
+    /* ── Center column ── */
+    .reveal-center-col {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; height: 100%; min-height: 400px;
+    }
+
+    /* ── Big card wrapper (handles enter/exit) ── */
+    .card-wrapper {
+      perspective: 1000px;
+      cursor: pointer;
+    }
+    .card-wrapper.entering {
+      animation: cardEnter .75s cubic-bezier(.22,.61,.36,1) both;
+    }
+    .card-wrapper.exit-left {
+      animation: cardExitLeft .4s ease-in forwards;
+    }
+    .card-wrapper.exit-right {
+      animation: cardExitRight .4s ease-in forwards;
+    }
+    @keyframes cardEnter {
+      0%   { transform: translateY(100vh) rotate(10deg) scale(.8); opacity: 0; }
+      60%  { transform: translateY(-18px) rotate(-2deg) scale(1.04); opacity: 1; }
+      80%  { transform: translateY(7px) rotate(1deg) scale(.99); }
+      100% { transform: translateY(0) rotate(0deg) scale(1); }
+    }
+    @keyframes cardExitLeft  {
+      to { transform: translateX(-220px) scale(.45); opacity: 0; }
+    }
+    @keyframes cardExitRight {
+      to { transform: translateX(220px)  scale(.45); opacity: 0; }
+    }
+
+    /* ── Big card (handles 3-D flip) ── */
+    .big-card {
+      width: 340px; height: 480px;
+      position: relative; transform-style: preserve-3d;
+      transition: transform .85s cubic-bezier(.4,0,.2,1);
+    }
+    .big-card.flipped { transform: rotateY(180deg); }
+
+    @keyframes cardRevealBounce {
+      0%   { transform: rotateY(180deg) scale(1); }
+      25%  { transform: rotateY(180deg) scale(1.1); }
+      60%  { transform: rotateY(180deg) scale(.97); }
+      100% { transform: rotateY(180deg) scale(1); }
+    }
+    .big-card.bounce { animation: cardRevealBounce .55s ease-out; }
+
+    .card-face {
+      position: absolute; inset: 0; border-radius: 16px;
+      backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    }
+
+    /* Card back */
+    .card-face.back {
+      background: linear-gradient(145deg,#0d2040 0%,#061020 50%,#1a3060 100%);
+      border: 2px solid #c8a84b;
+      box-shadow: 0 0 30px rgba(200,168,75,.4), 0 20px 60px rgba(0,0,0,.7);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .card-face.back::before {
+      content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(200,168,75,.04) 10px,rgba(200,168,75,.04) 20px);
+    }
+    .back-icon {
+      font-size: 4.5rem; z-index: 1;
+      filter: drop-shadow(0 0 18px rgba(200,168,75,.9));
+    }
+
+    /* Card front */
+    .card-face.front {
+      transform: rotateY(180deg);
+      display: flex; flex-direction: column;
+      padding: 20px 20px 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.7);
+      overflow: hidden;
+    }
+    .card-face.front.gk {
+      background: linear-gradient(160deg,#c89010 0%,#f5d97a 35%,#c8a84b 65%,#7a5010 100%);
+      border: 2px solid #f5d97a;
+    }
+    .card-face.front.out {
+      background: linear-gradient(160deg,#1a4070 0%,#2a6090 35%,#1a3060 65%,#0d1a30 100%);
+      border: 2px solid #4a90c8;
+    }
+    .cf-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .cf-left-top { display: flex; flex-direction: column; gap: 2px; }
+    .cf-rating {
+      font-size: 2.9rem; font-weight: 700; line-height: 1;
+    }
+    .front.gk  .cf-rating { color: #3a2000; }
+    .front.out .cf-rating { color: #c8e8ff; }
+
+    .cf-pos-label {
+      font-size: 1.1rem; font-weight: 700; letter-spacing: .04em;
+    }
+    .front.gk  .cf-pos-label { color: #5a3800; }
+    .front.out .cf-pos-label { color: #7ab8f5;  }
+
+    .cf-initials-circle {
+      width: 54px; height: 54px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; font-weight: 700; letter-spacing: .03em; flex-shrink: 0;
+    }
+    .front.gk  .cf-initials-circle { background:rgba(0,0,0,.18); color:#3a2000; border:2px solid rgba(0,0,0,.2); }
+    .front.out .cf-initials-circle { background:rgba(255,255,255,.1); color:#c8e8ff; border:2px solid rgba(255,255,255,.15); }
+
+    .cf-avatar {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .cf-name-center { text-align: center; }
+    .cf-firstname {
+      font-size: 1.9rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; line-height: 1.15;
+    }
+    .cf-lastname {
+      font-size: 1.9rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; line-height: 1.15;
+    }
+    .front.gk  .cf-firstname, .front.gk  .cf-lastname { color: #2a1500; }
+    .front.out .cf-firstname, .front.out .cf-lastname  { color: #fff; text-shadow: 0 0 18px rgba(122,184,245,.5); }
+
+    .cf-bottom { text-align: center; }
+
+    .cf-sep { height: 1px; margin: 10px 0; }
+    .front.gk  .cf-sep { background: rgba(0,0,0,.2); }
+    .front.out .cf-sep { background: rgba(255,255,255,.2); }
+
+    .cf-team-badge {
+      display: inline-block;
+      font-family: 'Rajdhani',sans-serif; font-size: .95rem;
+      font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 4px;
+    }
+    .cf-team-badge.ta {
+      background: rgba(122,184,245,.2); color: #7ab8f5; border: 1px solid rgba(122,184,245,.3);
+    }
+    .cf-team-badge.tb {
+      background: rgba(245,122,122,.2); color: #f57a7a; border: 1px solid rgba(245,122,122,.3);
+    }
+    /* override text on gold card */
+    .front.gk .cf-team-badge.ta { background:rgba(0,60,120,.25); color:#4a90d8; border-color:rgba(0,60,120,.3); }
+    .front.gk .cf-team-badge.tb { background:rgba(120,0,0,.25);  color:#d84a4a; border-color:rgba(120,0,0,.3);  }
+
+
+    /* Done button inside overlay */
+    #btn-show-teams {
+      display: none;
+      padding: 14px 48px;
+      font-family: 'Oswald',sans-serif; font-size: 1rem; font-weight: 600;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: #0a0a0f;
+      background: linear-gradient(135deg,#f5d97a,#c8a84b,#f5d97a);
+      border: none; cursor: pointer;
+      clip-path: polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+      transition: filter .2s, transform .15s;
+      animation: cardEnter .4s ease-out both;
+    }
+    #btn-show-teams.visible { display: block; }
+    #btn-show-teams:hover { filter: brightness(1.15); transform: translateY(-2px); }
+
+    /* ══ RESULTS ══ */
+    #results {
+      display: none; width: 100%; max-width: 1200px; padding: 40px 20px 60px;
+    }
+    #results.visible { display: block; }
+
+    .results-header { text-align: center; margin-bottom: 40px; }
+    .results-header h2 {
+      font-size: clamp(1.1rem,3vw,1.7rem); color: #c8a84b;
+      letter-spacing: .3em; text-transform: uppercase;
+    }
+
+    .teams-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+    }
+    @media (max-width: 700px) {
+      .teams-grid { grid-template-columns: 1fr; }
+    }
+
+    .team-panel {
+      background: linear-gradient(160deg,#111827,#0d1520);
+      border: 1px solid rgba(200,168,75,.3); border-radius: 16px;
+      overflow: hidden; opacity: 0; transform: translateY(40px);
+      transition: opacity .5s, transform .5s;
+    }
+    .team-panel.show { opacity: 1; transform: translateY(0); }
+
+    .team-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid rgba(200,168,75,.2);
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(90deg,rgba(200,168,75,.12),transparent);
+    }
+    .team-badge {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; flex-shrink: 0;
+    }
+    .team-a .team-badge { background:radial-gradient(circle,#1a3a6e,#0d1a3a); border:2px solid #4a8fd8; }
+    .team-b .team-badge { background:radial-gradient(circle,#6e1a1a,#3a0d0d); border:2px solid #d84a4a; }
+    .team-name { font-size:1.3rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+    .team-a .team-name { color:#7ab8f5; }
+    .team-b .team-name { color:#f57a7a; }
+    .team-count { font-family:'Rajdhani',sans-serif; font-size:.78rem; color:#556; letter-spacing:.2em; text-transform:uppercase; }
+
+    .players-list { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+
+    .player-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      opacity: 0; transform: translateX(-20px);
+      transition: opacity .4s, transform .4s, background .2s;
+    }
+    .player-card:hover { background: rgba(200,168,75,.07); border-color: rgba(200,168,75,.25); }
+    .player-card.show  { opacity: 1; transform: translateX(0); }
+
+    .card-pos {
+      width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .62rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .pos-gk  { background:linear-gradient(135deg,#c8a84b,#8a6a20); color:#000; box-shadow:0 0 10px rgba(200,168,75,.5); }
+    .pos-out { background:linear-gradient(135deg,#2a4a7a,#1a2a4a); color:#7ab8f5; border:1px solid rgba(122,184,245,.3); }
+
+    .card-info { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: .95rem; font-weight: 600; color: #eee;
+      letter-spacing: .04em; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-role {
+      font-family: 'Rajdhani',sans-serif; font-size: .72rem;
+      color: #556; letter-spacing: .12em; text-transform: uppercase; margin-top: 2px;
+    }
+    .card-rating { font-size: .85rem; font-weight: 700; color: #c8a84b; opacity: .8; }
+
+    .redraw-wrap { text-align: center; margin-top: 40px; }
+    #btn-redraw {
+      padding: 14px 48px;
+      font-family: 'Oswald',sans-serif; font-size: 1rem; font-weight: 600;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: #c8a84b; background: transparent;
+      border: 1px solid rgba(200,168,75,.5); cursor: pointer;
+      clip-path: polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+      transition: background .2s, color .2s;
+    }
+    #btn-redraw:hover { background: rgba(200,168,75,.12); color: #f5d97a; }
+
+    /* ══ FX ══ */
+    .burst-particle {
+      position: fixed; border-radius: var(--br, 50%);
+      pointer-events: none; z-index: 200;
+      animation: burstAnim var(--dur,.8s) ease-out forwards;
+    }
+    @keyframes burstAnim {
+      from { transform: translate(0,0) scale(1) rotate(0deg); opacity: 1; }
+      to   { transform: translate(var(--tx),var(--ty)) scale(0) rotate(var(--rot,180deg)); opacity: 0; }
+    }
+    .flash {
+      position: fixed; inset: 0; background: #fff; z-index: 99;
+      pointer-events: none; animation: flashAnim .4s ease-out forwards;
+    }
+    @keyframes flashAnim { from{opacity:.9} to{opacity:0} }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-logo">Draft Night</div>
+    <div class="hero-title-wrap">
+      <div class="hero-crossbones" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="white">
+          <g transform="rotate(-45 100 100)">
+            <circle cx="28"  cy="88"  r="16"/>
+            <circle cx="28"  cy="112" r="16"/>
+            <circle cx="172" cy="88"  r="16"/>
+            <circle cx="172" cy="112" r="16"/>
+            <rect x="28" y="91" width="144" height="18" rx="9"/>
+          </g>
+          <g transform="rotate(45 100 100)">
+            <circle cx="28"  cy="88"  r="16"/>
+            <circle cx="28"  cy="112" r="16"/>
+            <circle cx="172" cy="88"  r="16"/>
+            <circle cx="172" cy="112" r="16"/>
+            <rect x="28" y="91" width="144" height="18" rx="9"/>
+          </g>
+        </svg>
+      </div>
+      <h1 class="hero-title">Tibia e<br>Perone</h1>
+    </div>
+    <p class="hero-subtitle">Ultimate Team Edition</p>
+    <div class="btn-wrap">
+      <button id="btn-draw" class="gold-btn">&#9654; Apri il Pacchetto</button>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="results-header"><h2>&#9878; Squadre della Serata</h2></div>
+    <div class="teams-grid">
+      <div class="team-panel team-a" id="panel-a">
+        <div class="team-header">
+          <div class="team-badge">&#9917;</div>
+          <div>
+            <div class="team-name">Squadra A</div>
+            <div class="team-count">5 giocatori &bull; Calcio a 5</div>
+          </div>
+        </div>
+        <div class="players-list" id="list-a"></div>
+      </div>
+      <div class="team-panel team-b" id="panel-b">
+        <div class="team-header">
+          <div class="team-badge">&#9917;</div>
+          <div>
+            <div class="team-name">Squadra B</div>
+            <div class="team-count">5 giocatori &bull; Calcio a 5</div>
+          </div>
+        </div>
+        <div class="players-list" id="list-b"></div>
+      </div>
+    </div>
+    <div class="redraw-wrap">
+      <button id="btn-redraw">&#8635; Nuovo Draft</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OVERLAY ══ -->
+<div id="pack-overlay">
+
+  <!-- Pack screen -->
+  <div id="pack-screen">
+    <div class="pack-glow"></div>
+    <div class="pack-box" id="pack-box">
+      <div class="pack-inner">
+        <div class="pack-front">
+          <div class="pack-icon">&#9917;</div>
+          <div class="pack-label-big">DRAFT</div>
+          <div class="pack-label">Team Pack &bull; Gold Rare</div>
+        </div>
+      </div>
+    </div>
+    <div class="pack-tap-hint">Tocca per aprire</div>
+  </div>
+
+  <!-- Reveal screen -->
+  <div id="reveal-screen">
+    <div id="reveal-bg-name"></div>
+    <div class="reveal-layout">
+
+      <!-- Side A -->
+      <div class="reveal-side reveal-side-a">
+        <div class="side-label">&#9650; Squadra A</div>
+        <div id="side-cards-a"></div>
+      </div>
+
+      <!-- Center -->
+      <div class="reveal-center-col">
+        <div class="card-wrapper" id="card-wrapper">
+          <div class="big-card" id="big-card">
+            <div class="card-face back">
+              <div class="back-icon">&#9917;</div>
+            </div>
+            <div class="card-face front" id="card-front-face">
+              <!-- filled by JS -->
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-show-teams" class="gold-btn" style="font-size:.95rem;padding:14px 40px">
+          &#9654; Vedi Squadre
+        </button>
+      </div>
+
+      <!-- Side B -->
+      <div class="reveal-side reveal-side-b">
+        <div class="side-label">&#9650; Squadra B</div>
+        <div id="side-cards-b"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ DATA ══ -->
+<script id="giocatori-data" type="application/json">
+[
+  { "nome": "Michele Fiore",        "portiere": false },
+  { "nome": "Alessandro Giordano",  "portiere": true  },
+  { "nome": "Andrea Muggiano",      "portiere": false },
+  { "nome": "Giancarlo Di Marco",   "portiere": false },
+  { "nome": "Alessio Romagnoli",    "portiere": false },
+  { "nome": "Francesco Barresi",    "portiere": false },
+  { "nome": "Matteo Pane",          "portiere": false },
+  { "nome": "Stefano Viola",        "portiere": false },
+  { "nome": "Federico Montebianco", "portiere": true  },
+  { "nome": "Luca Campegiani",      "portiere": false }
+]
+</script>
+
+<script>
+  /* ── Background canvas ── */
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+  function resizeCanvas() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+  function initParticles() {
+    particles = Array.from({length:400}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*1.5+.3,
+      vx: (Math.random()-.5)*.3, vy: -Math.random()*.4-.1,
+      alpha: Math.random()*.5+.1,
+      color: Math.random()>.5 ? '#c8a84b' : '#2a5080'
+    }));
+  }
+  function animParticles() {
+    ctx.clearRect(0,0,W,H);
+    for (const p of particles) {
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha; ctx.fill();
+      p.x+=p.vx; p.y+=p.vy;
+      if (p.y < -5) { p.y = H+5; p.x = Math.random()*W; }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(animParticles);
+  }
+  window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
+  resizeCanvas(); initParticles(); animParticles();
+
+  /* ── Utils ── */
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i=a.length-1;i>0;i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function getInitials(nome) {
+    return nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  }
+
+  function randomRating(isGK) {
+    return isGK
+      ? Math.floor(Math.random()*13)+80   // 80–92
+      : Math.floor(Math.random()*17)+72;  // 72–88
+  }
+
+  /* ── FX ── */
+  function flashScreen(color) {
+    const f = document.createElement('div'); f.className='flash';
+    if (color) f.style.background = color;
+    document.body.appendChild(f); setTimeout(()=>f.remove(),400);
+  }
+
+  function burst(cx,cy) {
+    const colors = ['#f5d97a','#c8a84b','#fff','#7ab8f5','#f57a7a'];
+    for (let i=0;i<28;i++) {
+      const el = document.createElement('div'); el.className='burst-particle';
+      const angle = (i/28)*Math.PI*2;
+      const dist  = 80+Math.random()*120;
+      el.style.cssText = `left:${cx}px;top:${cy}px;width:8px;height:8px;background:${colors[i%colors.length]};--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;`;
+      document.body.appendChild(el); setTimeout(()=>el.remove(),800);
+    }
+  }
+
+  function celebrateReveal(isGK) {
+    const wrapper = document.getElementById('card-wrapper');
+    const rect = wrapper.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+
+    const goldColors  = ['#f5d97a','#c8a84b','#fff8c0','#fff','#d4a017','#ffe066'];
+    const blueColors  = ['#7ab8f5','#4a90c8','#c8e8ff','#fff','#2a80d8','#a0d0ff'];
+    const colors = isGK ? goldColors : blueColors;
+    const ringColor = isGK ? '#f5d97a' : '#7ab8f5';
+
+    // Colored flash
+    flashScreen(isGK
+      ? 'radial-gradient(circle at 50% 50%, rgba(245,217,122,.45) 0%, transparent 70%)'
+      : 'radial-gradient(circle at 50% 50%, rgba(122,184,245,.4) 0%, transparent 70%)');
+
+    // Big particle burst (50 particles, mix of circles and squares)
+    for (let i=0;i<50;i++) {
+      const el = document.createElement('div');
+      el.className = 'burst-particle';
+      const angle = (i/50)*Math.PI*2 + (Math.random()-.5)*.4;
+      const dist  = 80 + Math.random()*200;
+      const size  = 4 + Math.random()*10;
+      const dur   = (.5 + Math.random()*.6).toFixed(2);
+      const isSquare = Math.random() > .6;
+      el.style.cssText = `
+        left:${cx}px;top:${cy}px;
+        width:${size}px;height:${size}px;
+        background:${colors[i%colors.length]};
+        --br:${isSquare ? '2px' : '50%'};
+        --dur:${dur}s;
+        --tx:${Math.cos(angle)*dist}px;
+        --ty:${Math.sin(angle)*dist}px;
+        --rot:${Math.round(Math.random()*360)}deg;
+      `;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(), dur*1000+100);
+    }
+
+    // Card bounce
+    const bigCard = document.getElementById('big-card');
+    bigCard.classList.remove('bounce');
+    void bigCard.offsetWidth; // reflow to restart animation
+    bigCard.classList.add('bounce');
+    setTimeout(()=>bigCard.classList.remove('bounce'), 600);
+  }
+
+  /* ── Build teams ── */
+  function buildTeams() {
+    const players = JSON.parse(document.getElementById('giocatori-data').textContent);
+    const gks = shuffle(players.filter(p=>p.portiere));
+    const out = shuffle(players.filter(p=>!p.portiere));
+    if (gks.length < 2) { alert('Servono almeno 2 portieri!'); return null; }
+
+    const teamA = [gks[0], ...out.slice(0,4)].map(p=>({...p, team:'A', rating:randomRating(p.portiere)}));
+    const teamB = [gks[1], ...out.slice(4,8)].map(p=>({...p, team:'B', rating:randomRating(p.portiere)}));
+    return { teamA, teamB };
+  }
+
+  /* Interleave A/B: A1,B1,A2,B2,... */
+  function interleave(tA, tB) {
+    const q = [];
+    const len = Math.max(tA.length, tB.length);
+    for (let i=0;i<len;i++) {
+      if (i<tA.length) q.push(tA[i]);
+      if (i<tB.length) q.push(tB[i]);
+    }
+    return q;
+  }
+
+  /* ── Reveal state ── */
+  let revealQueue      = [];
+  let revealIndex      = 0;
+  let autoAdvanceTimer = null;
+  let teamsData        = null;
+
+  /* ── Start reveal ── */
+  function startReveal(teams) {
+    revealQueue = interleave(teams.teamA, teams.teamB);
+    revealIndex = 0;
+
+    document.getElementById('side-cards-a').innerHTML = '';
+    document.getElementById('side-cards-b').innerHTML = '';
+    document.getElementById('btn-show-teams').classList.remove('visible');
+    document.getElementById('reveal-bg-name').innerHTML = '';
+
+    document.getElementById('pack-screen').style.display  = 'none';
+    document.getElementById('reveal-screen').classList.add('active');
+
+    showNextCard();
+  }
+
+  /* ── Background name ── */
+  function showBgName(nome, isGK) {
+    const container = document.getElementById('reveal-bg-name');
+    container.innerHTML = '';
+    const color = isGK ? 'rgba(245,217,122,.18)' : 'rgba(100,170,245,.18)';
+    const parts = nome.split(' ');
+    const first = parts[0].toUpperCase();
+    const last  = parts.slice(1).join(' ').toUpperCase();
+
+    const elFirst = document.createElement('div');
+    elFirst.className = 'reveal-bg-line reveal-bg-firstname';
+    elFirst.textContent = first;
+    elFirst.style.color = color;
+
+    const elLast = document.createElement('div');
+    elLast.className = 'reveal-bg-line reveal-bg-lastname';
+    elLast.textContent = last;
+    elLast.style.color = color;
+
+    container.appendChild(elFirst);
+    if (last) container.appendChild(elLast);
+  }
+
+  function hideBgName() {
+    document.querySelectorAll('#reveal-bg-name .reveal-bg-line').forEach(el => {
+      el.style.transition = 'opacity .3s ease-in, transform .3s ease-in';
+      el.style.opacity = '0';
+      el.style.transform = 'scale(.97)';
+    });
+    setTimeout(() => {
+      const c = document.getElementById('reveal-bg-name');
+      if (c) c.innerHTML = '';
+    }, 320);
+  }
+
+  /* ── Show one card ── */
+  function showNextCard() {
+    if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+
+    if (revealIndex >= revealQueue.length) {
+      document.getElementById('card-wrapper').style.display = 'none';
+      document.getElementById('btn-show-teams').classList.add('visible');
+      return;
+    }
+
+    const player = revealQueue[revealIndex];
+    const total  = revealQueue.length;
+
+
+    const isGK      = player.portiere;
+    const teamClass = player.team === 'A' ? 'ta' : 'tb';
+    const nameParts = player.nome.split(' ');
+    const firstName = nameParts[0];
+    const lastName  = nameParts.slice(1).join(' ');
+    const front = document.getElementById('card-front-face');
+    front.className = `card-face front ${isGK ? 'gk' : 'out'}`;
+    front.innerHTML = `
+      <div class="cf-top">
+        <div class="cf-left-top">
+          <div class="cf-rating">${player.rating}</div>
+          <div class="cf-pos-label">${isGK ? 'POR' : 'CAM'}</div>
+        </div>
+        <div class="cf-initials-circle">${getInitials(player.nome)}</div>
+      </div>
+      <div class="cf-avatar">
+        <div class="cf-name-center">
+          <div class="cf-firstname">${firstName}</div>
+          <div class="cf-lastname">${lastName}</div>
+        </div>
+      </div>
+      <div class="cf-bottom">
+        <div class="cf-sep"></div>
+        <span class="cf-team-badge ${teamClass}">Squadra ${player.team}</span>
+      </div>
+    `;
+
+    // Reset — disabilita transizione per evitare reverse-flip visibile
+    const wrapper = document.getElementById('card-wrapper');
+    const bigCard = document.getElementById('big-card');
+    bigCard.style.transition = 'none';
+    wrapper.style.display = '';
+    wrapper.className = 'card-wrapper';
+    bigCard.className = 'big-card';
+    void bigCard.offsetWidth;
+    bigCard.style.transition = '';
+
+    requestAnimationFrame(() => {
+      wrapper.classList.add('entering');
+
+      setTimeout(() => {
+        // Mostra il nome in background + flip
+        showBgName(player.nome, isGK);
+        bigCard.classList.add('flipped');
+
+        // Effetti festosi
+        setTimeout(() => celebrateReveal(isGK), 430);
+
+        // Auto-avanza dopo 1.8s dal flip
+        autoAdvanceTimer = setTimeout(doAdvance, 1800);
+      }, 750);
+    });
+  }
+
+  /* ── Avanza alla card successiva ── */
+  function doAdvance() {
+    if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+    hideBgName();
+
+    const player    = revealQueue[revealIndex];
+    const wrapper   = document.getElementById('card-wrapper');
+    const exitClass = player.team === 'A' ? 'exit-left' : 'exit-right';
+    wrapper.classList.add(exitClass);
+
+    setTimeout(() => addMiniCard(player), 200);
+    setTimeout(() => { revealIndex++; showNextCard(); }, 420);
+  }
+
+  /* ── Mini card ── */
+  function addMiniCard(player) {
+    const isGK = player.portiere;
+    const sideId = player.team === 'A' ? 'side-cards-a' : 'side-cards-b';
+    const side   = document.getElementById(sideId);
+
+    const mc = document.createElement('div');
+    mc.className = `mini-card`;
+
+    mc.innerHTML = `
+      <div class="mini-pos ${isGK?'gk':'out'}">${isGK?'POR':'CAM'}</div>
+      <div class="mini-name">${player.nome}</div>
+    `;
+    side.appendChild(mc);
+
+    requestAnimationFrame(() => {
+      mc.classList.add(player.team==='A' ? 'show-a' : 'show-b');
+    });
+  }
+
+  /* ── Render final results ── */
+  function renderFinalTeams(teams) {
+    function fillList(listId, panelId, players, delay) {
+      const list  = document.getElementById(listId);
+      const panel = document.getElementById(panelId);
+      list.innerHTML = '';
+      setTimeout(() => {
+        panel.classList.add('show');
+        players.forEach((p,i) => {
+          const card = document.createElement('div');
+          card.className = 'player-card';
+          card.innerHTML = `
+            <div class="card-pos ${p.portiere?'pos-gk':'pos-out'}">${p.portiere?'POR':'CAM'}</div>
+            <div class="card-info">
+              <div class="card-name">${p.nome}</div>
+              <div class="card-role">${p.portiere?'Portiere':'Giocatore di movimento'}</div>
+            </div>
+            <div class="card-rating">${p.rating}</div>
+          `;
+          list.appendChild(card);
+          setTimeout(()=>card.classList.add('show'), i*120);
+        });
+      }, delay);
+    }
+    fillList('list-a','panel-a', teams.teamA, 150);
+    fillList('list-b','panel-b', teams.teamB, 400);
+  }
+
+  /* ── Event handlers ── */
+  document.getElementById('btn-draw').addEventListener('click', () => {
+    const btn = document.getElementById('btn-draw');
+    btn.disabled = true;
+    teamsData = buildTeams();
+    if (!teamsData) { btn.disabled=false; return; }
+    document.getElementById('pack-overlay').classList.add('active');
+  });
+
+  document.getElementById('pack-box').addEventListener('click', () => {
+    const rect = document.getElementById('pack-box').getBoundingClientRect();
+    flashScreen(null);
+    burst(rect.left+rect.width/2, rect.top+rect.height/2);
+    startReveal(teamsData);
+  });
+
+  document.getElementById('btn-show-teams').addEventListener('click', () => {
+    document.getElementById('pack-overlay').classList.remove('active');
+    document.getElementById('reveal-screen').classList.remove('active');
+    document.getElementById('pack-screen').style.display = '';
+
+    document.getElementById('panel-a').classList.remove('show');
+    document.getElementById('panel-b').classList.remove('show');
+    document.getElementById('results').classList.add('visible');
+
+    renderFinalTeams(teamsData);
+  });
+
+  document.getElementById('btn-redraw').addEventListener('click', () => {
+    document.getElementById('results').classList.remove('visible');
+    document.getElementById('panel-a').classList.remove('show');
+    document.getElementById('panel-b').classList.remove('show');
+
+    teamsData = buildTeams();
+    if (!teamsData) return;
+
+    document.getElementById('btn-draw').disabled = false;
+    document.getElementById('pack-overlay').classList.add('active');
+  });
+</script>
+</body>
+</html>
